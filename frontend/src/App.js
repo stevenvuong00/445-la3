@@ -15,7 +15,8 @@ function App() {
     function startRecording() {
       setCapturing(true);
       mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
-        mimeType: "video/webm",
+        mimeType: "video/webm; codecs=avc1",
+        videoBitsPerSecond: 5000000,
       });
 
       mediaRecorderRef.current.addEventListener("dataavailable", (e) => {
@@ -31,7 +32,8 @@ function App() {
       recordingInterval.current = setInterval(() => {
         mediaRecorderRef.current.stop();
         mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
-          mimeType: "video/webm",
+          mimeType: "video/webm; codecs=avc1",
+          videoBitsPerSecond: 5000000,
         });
         mediaRecorderRef.current.addEventListener("dataavailable", (e) => {
           chunks.push(e.data);
@@ -52,7 +54,7 @@ function App() {
       const formData = new FormData();
       formData.append("video", blob, "video.mp4");
 
-      fetch(`http://localhost:7070/lab`, {
+      fetch(`http://localhost:7070/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "video/mp4",

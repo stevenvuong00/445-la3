@@ -43,6 +43,7 @@ const resolutions = [
   },
 ];
 app.post("/upload", upload.single("video"), (req, res) => {
+  console.log("upload");
   const video = req.file;
   if (!video) {
     res.send("No video found");
@@ -78,51 +79,6 @@ app.post("/upload", upload.single("video"), (req, res) => {
   res.send(req.body);
 });
 
-app.get("/create_init", (req, res) => {
-  resolutions.forEach((resolution) => {
-    ffmpeg()
-      .input(`fragmented_segments/segment${resolution.name}_00.mp4`)
-      .outputOptions("-c", "copy")
-      .outputOptions("-map", "0:v:0")
-      .output(`fragmented_segments/unfragmented_init${resolution.name}.mp4`)
-      .on("start", (commandLine) => {
-        console.log(`Spawned Ffmpeg with command: ${commandLine}`);
-      })
-      .on("error", (err) => {
-        console.error(`An error occurred ${resolution.name}: ${err.message}`);
-        res.send("error");
-        return;
-      })
-      .on("end", () => {
-        console.log("Processing finished!");
-      })
-      .run();
-  });
-  resolutions.forEach((resolution) => {
-    ffmpeg(`fragmented_segments/unfragmented_init${resolution.name}.mp4`)
-      .audioCodec("aac")
-      .audioBitrate("128k")
-      .size(resolution.size)
-      .addOption("-c:v", "libx264")
-      .addOption("-profile:v", "main")
-      .addOption("-level", "3.2")
-      .addOption("-pix_fmt", "yuv420p")
-      .addOption("-preset", "medium")
-      .addOption("-tune", "zerolatency")
-      .addOption("-flags", "+cgop+low_delay")
-      .addOption(
-        "-movflags",
-        "empty_moov+omit_tfhd_offset+frag_keyframe+default_base_moof+isml"
-      )
-      .on("end", () => {
-        console.log(`${resolution.name} completed`);
-      })
-      .output(`fragmented_segments/init${resolution.name}.mp4`)
-      .run();
-  });
-  res.send("success");
-});
-
 app.get("/get_mpd_playlist", (req, res) => {
   console.log("get_mpd_playlist");
   const mpd = xmlbuilder.create("MPD", { version: "1.0", encoding: "UTF-8" });
@@ -134,7 +90,7 @@ app.get("/get_mpd_playlist", (req, res) => {
     "urn:hbbtv:dash:profile:isoff-live:2012,urn:mpeg:dash:profile:isoff-live:2011"
   );
   mpd.att("type", "static");
-  mpd.att("mediaPresentationDuration", "15");
+  mpd.att("mediaPresentationDuration", "3");
   mpd.att("minBufferTime", "PT2S");
 
   const period = mpd.ele("Period", { duration: "15" });
@@ -160,7 +116,6 @@ app.get("/get_mpd_playlist", (req, res) => {
     "initialization",
     "fragmented_segments/segment$RepresentationID$_00.mp4"
   );
-  segmentTemplate1.att("timescale", "1");
   segmentTemplate1.att("startNumber", "1");
   segmentTemplate1.att("duration", "3");
 
